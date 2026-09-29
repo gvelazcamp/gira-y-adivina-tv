@@ -5,6 +5,9 @@ import android.app.AlertDialog;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
+import android.annotation.SuppressLint;
+import android.window.OnBackInvokedDispatcher;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -24,6 +27,10 @@ public final class MainActivity extends Activity {
     private boolean errorVisible;
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::showExitDialog);
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
@@ -90,7 +97,7 @@ public final class MainActivity extends Activity {
         setContentView(box); retry.requestFocus();
     }
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
-        if (!errorVisible && web != null && event.getAction() == KeyEvent.ACTION_DOWN) {
+        if (!errorVisible && web != null) {
             String direction = switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_DPAD_UP -> "up";
                 case KeyEvent.KEYCODE_DPAD_DOWN -> "down";
@@ -100,13 +107,17 @@ public final class MainActivity extends Activity {
                 default -> null;
             };
             if (direction != null) {
-                web.evaluateJavascript("window.gyaTVRemote && window.gyaTVRemote('" + direction + "')", null);
+                if (event.getAction() == KeyEvent.ACTION_DOWN)
+                    web.evaluateJavascript("window.gyaTVRemote && window.gyaTVRemote('" + direction + "')", null);
                 return true;
             }
         }
         return super.dispatchKeyEvent(event);
     }
-    @Override public void onBackPressed() {
+    // API 23-32 fallback; newer Android uses the callback registered in onCreate.
+    @SuppressLint("GestureBackNavigation")
+    @Override public void onBackPressed() { showExitDialog(); }
+    private void showExitDialog() {
         new AlertDialog.Builder(this).setTitle("Sala TV")
             .setMessage("Salir cerrará la sala y la partida actual.")
             .setPositiveButton("Seguir jugando", (d,w) -> { if(web != null) web.requestFocus(); })
