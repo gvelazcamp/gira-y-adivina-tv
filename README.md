@@ -1,66 +1,57 @@
-# Girá y Adiviná — App para Android TV
+# Girá y Adiviná — Sala TV para Android TV
 
-Este repo arma una app instalable de Android TV para "Girá y Adiviná Rioplatense", usando el modo **Sala TV** que ya existe en el juego: la tele muestra la pantalla compartida (sin necesitar tocarla) y cada jugador se suma desde su celular con un código, igual que Jackbox Party Pack.
+Aplicación de **prueba**, instalable manualmente. La TV muestra la partida del juego
+existente y cada persona juega y escribe las respuestas desde su celular.
+No exige otra app en el celular. Requiere internet.
 
-La app es un **TWA** (Trusted Web Activity): no tiene juego adentro, solo abre la web ya publicada (`https://gvelazcamp.github.io/gira-y-adivina-rioplatense/`) directo en modo anfitrión de Sala TV (`?tvhost=1`).
+## Descargar e instalar
 
-## Por qué no está compilada todavía
+1. Abrir [Releases](https://github.com/gvelazcamp/gira-y-adivina-tv/releases) y descargar
+   `gira-y-adivina-tv-prueba.apk` de la prueba más reciente (no «Source code»).
+2. Pasar el archivo a la tele por USB o por el método de transferencia de la TV.
+3. Abrir el APK con el gestor de archivos y permitir temporalmente instalar desde
+   esa fuente cuando Android lo solicite.
+4. Abrir **Girá y Adiviná TV · Prueba** en la tele y elegir **Mostrar código de sala**.
+5. En cada celular abrir https://gvelazcamp.github.io/gira-y-adivina-rioplatense/tv.html
+   e ingresar nombre y código de seis caracteres.
+6. Con 2 a 6 jugadores conectados, comenzar y sortear quién arranca.
 
-El entorno donde armé este proyecto tiene bloqueado el acceso a los servidores de Android (`dl.google.com`) por política de red, así que no pude descargar el Android SDK ni compilar el archivo final (.aab). Dejé toda la configuración lista (`twa-manifest.json`) para que el build se termine en una computadora con internet normal.
+La TV muestra tablero, ruleta y resultados. Las acciones y respuestas se envían desde
+los celulares. Atrás en el mando permite seguir, crear otra sala o salir.
+Cerrar/reiniciar la TV termina la partida; recargar la pestaña del mismo celular
+recupera su lugar. No cerrar la pestaña ni borrar sus datos de sesión.
 
-## Cómo terminar el build (en tu compu, con internet normal)
+Si una actualización del APK falla por firma distinta, desinstalar la prueba anterior
+e instalar la nueva. La firma de depuración se conserva en caché de Actions cuando
+está disponible; no es una clave de distribución de producción.
 
-Necesitás tener instalado [Node.js](https://nodejs.org/) (18 o más nuevo).
+## Implementación y compilación
 
-```bash
-npm install -g @bubblewrap/cli
-git clone https://github.com/gvelazcamp/gira-y-adivina-tv
-cd gira-y-adivina-tv
-bubblewrap init --manifest="https://gvelazcamp.github.io/gira-y-adivina-rioplatense/manifest.json"
-```
+Proyecto Android WebView, horizontal, con entrada Leanback, banner, navegación con
+mando, pantalla encendida y manejo de errores. No depende de Chrome/Custom Tabs.
+La navegación queda limitada al sitio del juego; no hay puente JavaScript nativo.
 
-Cuando pregunte, decile que instale su propio JDK y Android SDK (la opción recomendada, "Y"). Va a tardar unos minutos la primera vez (descarga el SDK).
+- Paquete de prueba: `io.github.gvelazcamp.giratv.prueba`.
+- URL: `index.html?tvhost=1` del juego actual.
+- Android mínimo: API 23; WebView actualizado requerido por el juego web.
+- `twa-manifest.json` es histórico y **no se usa** para compilar.
+- No se modifica la ficha Play Console ni el paquete de la aplicación de celular.
 
-Al terminar `init`, va a generar todo el proyecto Android. Ahí hay que:
+Actions → **APK de prueba Android TV** compila con `lintDebug assembleDebug` y publica
+APK y checksum SHA-256 en una prerelease. Para compilar localmente: JDK 17, Gradle 8.13,
+Android SDK 36/Build Tools 35.0.0 y `gradle lintDebug assembleDebug`.
 
-1. **Reemplazar** el `twa-manifest.json` generado por el de este repo (ya tiene la URL de inicio en modo Sala TV y los colores del juego).
-2. Volver a correr `bubblewrap update` para que tome esos cambios.
-3. Seguir los pasos de "Agregar soporte para TV" más abajo.
-4. Compilar con `bubblewrap build` — esto genera `app-release-signed.aab`, listo para subir a Play Console.
+## Estado
 
-## Agregar soporte para TV (importante, no lo hace Bubblewrap solo)
+Compilación y lint Android verificados. Flujo web probado con dos jugadores y broker
+real; partida completa y revancha verificadas con transporte simulado. Ver
+[pruebas del juego](https://github.com/gvelazcamp/gira-y-adivina-rioplatense/blob/main/SALA_TV_PRUEBA.md).
 
-Bubblewrap arma apps para celular. Para que Google Play la reconozca como app de TV y no la rechace, hay que editar a mano `app/src/main/AndroidManifest.xml` (generado por `bubblewrap init`) y agregar:
+**Pendiente:** prueba física el fin de semana: mando, imagen, sonido, suspensión de
+celulares y red doméstica. Los brokers públicos existentes no garantizan disponibilidad
+ni privacidad de salas. Cerrar el anfitrión pierde la partida; no hay guardado de sala.
 
-```xml
-<!-- Dentro de <manifest>, junto a los demás <uses-feature> -->
-<uses-feature android:name="android.software.leanback" android:required="false" />
-<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-
-<!-- Dentro de <application>, un segundo <intent-filter> en el mismo <activity> principal -->
-<intent-filter>
-    <action android:name="android.intent.action.MAIN" />
-    <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-</intent-filter>
-
-<!-- Dentro de <application>, el banner que pide Android TV (320x180px) -->
-<meta-data android:name="android.tv" android:value="true" />
-```
-
-Y agregar un ícono banner de 320×180px en `app/src/main/res/drawable/tv_banner.png`, referenciado como `android:banner="@drawable/tv_banner"` en `<application>`.
-
-## ¿Va a ser la misma app que ya está en Play Store, o una nueva?
-
-Depende de qué `packageId` uses:
-
-- Si usás uno **nuevo** (lo que dejé configurado: `io.github.gvelazcamp.giratv`), Play Store la va a tratar como una **app aparte**, con su propia ficha. Es el camino más simple porque no necesita el keystore de firma original.
-- Si querés que sea **la misma app** que ya está publicada (`io.github.gvelazcamp.twa`), hay que usar ese mismo `packageId` en el `twa-manifest.json` y firmarla con **el mismo keystore** que se usó para la app actual — sin ese archivo de firma, Google Play va a rechazar la actualización. Ese keystore no está en ningún repo (por seguridad, nunca debe estarlo); si no sabés dónde quedó guardado, lo más simple es publicarla como app nueva.
-
-## Publicar
-
-Una vez que tengas el `.aab` firmado:
-
-1. Andá a [Play Console](https://play.google.com/console).
-2. Si es una app nueva: creá una ficha nueva y subí el `.aab` en una prueba interna primero.
-3. En la sección de "Dispositivos compatibles" / "Catálogo de dispositivos", confirmá que aparece Android TV como compatible (si el `AndroidManifest.xml` quedó bien configurado, Google lo detecta solo).
-4. Probala en un emulador de Android TV o una tele real antes de mandarla a producción.
+No se ha publicado en Play Store ni preparado firma de producción. Integrarla en la
+ficha existente exige revisar el proyecto/firma Android actual. Este paquete separado
+es solo para probar. No se configuró un dominio propio: si cambia, actualizar `GAME_URL`
+y el filtro de navegación de `MainActivity` y recompilar.
