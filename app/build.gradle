@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'io.github.gvelazcamp.giratv'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.github.gvelazcamp.giratv'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '0.1-prueba'
+        buildConfigField 'String', 'GAME_URL', '"https://gvelazcamp.github.io/gira-y-adivina-rioplatense/index.html?tvhost=1"'
+    }
+    buildFeatures { buildConfig true }
+    buildTypes {
+        debug { applicationIdSuffix '.prueba'; debuggable true }
+        release { minifyEnabled false }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
